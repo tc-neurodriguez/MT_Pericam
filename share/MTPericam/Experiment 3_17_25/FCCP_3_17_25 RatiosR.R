@@ -3,6 +3,7 @@ library(readxl)
 library(tidyverse)
 library(reshape2)
 library(ggplot2)
+library(ggpubr)
 library(rstatix)
 library(ggbeeswarm)
 library(pheatmap)
@@ -193,65 +194,46 @@ plot_plate_heatmap(plate_485_525_415_518, "FCCP 485_525/415_518 Z-Scores")
 plot_plate_heatmap(plate_415_518_555_586, "FCCP 415_518/555_586 Z-Scores")
 plot_plate_heatmap(plate_485_525_555_586, "FCCP 485_525/555_586 Z-Scores")
 plot_plate_heatmap(plate_555_586_370_470, "FCCP 555_586/(370_470+555_586) Z-scores")
+library(tidyverse)
+library(patchwork)
 
-# Kruskal-Wallis and Dunn's test analysis
-# Convert groups to data frame
-group_df <- map2_dfr(groups, names(groups), ~ tibble(Well = .x, Group = .y))
-
-# Merge group information
-gm_df <- merged_5 %>%
-  left_join(group_df, by = "Well")
-
-# Function to create boxplot with statistical annotations
-create_boxplot <- function(data, y_col, title, ylabel) {
-  # Kruskal-Wallis test
-  kruskal_test <- data %>%
-    kruskal_test(as.formula(paste(y_col, "~ Group")))
-
-  cat(paste(title, "- Kruskal-Wallis p-value:", kruskal_test$p, "\n"))
-
-  # Dunn's post hoc test
-  dunn_test <- data %>%
-    dunn_test(as.formula(paste(y_col, "~ Group")), p.adjust.method = "bonferroni")
-
-  cat(paste(title, "- Dunn's test results:\n"))
-  print(dunn_test)
-
-  # Create plot
-  p <- ggplot(data, aes(x = Group, y = !!sym(y_col), fill = Group)) +
-    geom_boxplot(aes(fill = Group), outlier.shape = NA) +
-    geom_beeswarm(size = 2, cex = 3) +
-    stat_pvalue_manual(
-      dunn_test %>% filter(p.adj < 0.05),
-      label = "p.adj.signif",
-      y.position = max(data[[y_col]], na.rm = TRUE) * (1 + 0.1 * (1:nrow(dunn_test %>% filter(p.adj < 0.05)))),
-      step.increase = 0.1
-    ) +
-    labs(title = title, x = "Group", y = ylabel) +
-    theme_minimal() +
-    theme(legend.position = "none")
-
-  return(p)
+# 1. Define a consistent theme
+my_theme <- function() {
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      legend.position = "none",
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
 }
 
-# Create multi-panel boxplot
-p1 <- create_boxplot(gm_df, "485_525/415_518",
-                    "Mitochondrial Function 3min exposure to FCCP",
-                    "Pericam Fluorescence Ratio (485_525/415_518)")
+# 2. Create plotting function
+create_plot <- function(data, y_var, title) {
+  ggplot(data, aes(x = Group, y = .data[[y_var]], fill = Group)) +
+    geom_boxplot(width = 0.6, outlier.shape = NA) +
+    geom_beeswarm(size = 2, cex = 3) +
+    labs(title = title, y = NULL, x = NULL) +
+    my_theme()
+}
 
-p2 <- create_boxplot(gm_df, "415_518/555_586",
-                    "Mitochondrial Calcium 3min exposure to FCCP",
-                    "Pericam Fluorescence Ratio (415_518/555_586)")
+# 3. Create all plots
+plots <- list(
+  "485_525/415_518" = create_plot(gm_df, "485_525/415_518", "Mitochondrial Function"),
+  "415_518/555_586" = create_plot(gm_df, "415_518/555_586", "Mitochondrial Calcium"),
+  "485_525/555_586" = create_plot(gm_df, "485_525/555_586", "Mitochondrial pH"),
+  "555_586/(370_470+555_586)" = create_plot(gm_df, "555_586/(370_470+555_586)", "Mitochondrial Volume")
+)
 
-p3 <- create_boxplot(gm_df, "485_525/555_586",
-                    "Mitochondrial pH 3min exposure to FCCP",
-                    "Pericam Fluorescence Ratio (485_525/555_586)")
+# 4. Combine with patchwork
+final_plot <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(
+    title = "Multipanel Figure: Mitochondrial Function via Ratiometric Pericam",
+    theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
+)
 
-p4 <- create_boxplot(gm_df, "555_586/(370_470+555_586)",
-                    "Mitochondrial volume 3min exposure to FCCP",
-                    "Pericam Fluorescence Ratio (555_586/(370_470+555_586))")
-
-# Arrange plots
-ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2) %>%
-  annotate_figure(top = text_grob("Multipanel Figure: Mitochondrial Function via Ratiometric Pericam",
-                                 face = "bold", size = 16))
+# 5. Export (optional)
+ggsave("final_mitochondrial_analysis.png",
+       plot = final_plot,
+       width = 12,
+       height = 10,
+       dpi = 300)
