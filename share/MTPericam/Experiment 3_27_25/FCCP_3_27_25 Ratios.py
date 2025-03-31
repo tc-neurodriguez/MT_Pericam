@@ -12,49 +12,7 @@ groups = {
 }
 
 
-df = pd.read_excel(file_path)
 
-import pandas as pd
-
-
-def parse_plate_data(file_path):
-    # Read the Excel file, treating the first row as headers
-    df = pd.read_excel(file_path, header=0)
-
-    # Extract the Read # from the first column's header
-    read_header = df.columns[0]
-    read_number = read_header.split(":")[1].split(",")[0]  # Extracts "415" from "Read 1:415,518"
-
-    # Clean up column headers (remove metadata from well columns)
-    new_columns = []
-    for col in df.columns:
-        if col.startswith(('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H')):
-            new_columns.append(col)
-        else:
-            new_columns.append(col.split(" ")[-1])  # Keeps "Time", "T°"
-
-    df.columns = new_columns
-
-    # Add Read # as a column
-    df["Read"] = read_number
-
-    return df
-
-
-
-result_df = parse_plate_data(file_path)
-
-# Save to new Excel file
-output_path = "processed_plates.xlsx"
-result_df.to_excel(output_path, index=False)
-
-print(f"Processed data saved to {output_path}")
-print(result_df.head())
-if not result_df.empty:
-    result_df.to_excel("processed_plates.xlsx", index=False)
-    print(f"Success! Processed {len(result_df)} plates.")
-else:
-    print("No plates found. Check your input file.")
 
 # 1. Data Loading with Debugging
 def load_and_process(sheet_name, wavelength):
@@ -92,12 +50,11 @@ print("🚀 STARTING DATA PROCESSING")
 print("=" * 50)
 
 wavelengths = {
-    '370_470',
-    '415_518',
-    '485_525',
-    '555_586'
+    'Sheet1': '370_470',
+    'Sheet2': '415_518',
+    'Sheet3': '485_525',
+    'Sheet4': '555_586'
 }
-
 merged = None
 for sheet, name in wavelengths.items():
     df = load_and_process(sheet, name)
