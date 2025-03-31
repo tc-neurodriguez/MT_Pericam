@@ -194,46 +194,97 @@ plot_plate_heatmap(plate_485_525_415_518, "FCCP 485_525/415_518 Z-Scores")
 plot_plate_heatmap(plate_415_518_555_586, "FCCP 415_518/555_586 Z-Scores")
 plot_plate_heatmap(plate_485_525_555_586, "FCCP 485_525/555_586 Z-Scores")
 plot_plate_heatmap(plate_555_586_370_470, "FCCP 555_586/(370_470+555_586) Z-scores")
+
+
+
+
+
+
 library(tidyverse)
 library(patchwork)
+library(rstatix)
+library(ggbeeswarm)
 
-# 1. Define a consistent theme
-my_theme <- function() {
-  theme_minimal(base_size = 12) +
-    theme(
-      plot.title = element_text(face = "bold", hjust = 0.5),
-      legend.position = "none",
-      axis.text.x = element_text(angle = 45, hjust = 1)
-    )
+# 1. Clean and verify column names
+gm_df <- gm_df %>%
+  # Clean column names to be R-friendly
+  rename_with(~ str_replace_all(., "/", "_over_"), matches("/")) %>%
+  rename_with(~ paste0("X", .), matches("^[0-9]")) %>% # Add X to numeric-start names
+  mutate(
+    Group = factor(Group, levels = names(groups)),
+    across(matches("X[0-9]"), as.numeric)
+  )
+
+# Verify cleaned names
+cat("Cleaned column names:\n")
+print(names(gm_df))
+
+# 2. Create explicit name mapping
+ratio_mapping <- list(
+  "Mitochondrial Function" = "X485_525_over_415_518",
+  "Mitochondrial Calcium" = "X415_518_over_555_586",
+  "Mitochondrial pH" = "X485_525_over_555_586",
+  "Mitochondrial Volume" = "X555_586_over_370_470_plus_555_586"
+)
+
+# 3. Statistical testing function
+run_stats <- function(data, y_var) {
+  tryCatch({
+    anova_res <- data %>% anova_test(dv = !!sym(y_var), between = Group)
+    cat("\n--- ANOVA for", y_var, "---\n")
+    print(anova_res)
+
+    data %>%
+      t_test(as.formula(paste(y_var, "~ Group")),
+             p.adjust.method = "holm") %>%
+      add_xy_position(x = "Group", step.increase = 0.1)
+  }, error = function(e) {
+    message("Stats failed for ", y_var, ": ", e$message)
+    return(NULL)
+  })
 }
 
-# 2. Create plotting function
-create_plot <- function(data, y_var, title) {
-  ggplot(data, aes(x = Group, y = .data[[y_var]], fill = Group)) +
+# 4. Plotting function with verification
+create_plot <- function(data, title, y_var) {
+  if (!y_var %in% names(data)) {
+    stop(paste("Column", y_var, "not found for", title))
+  }
+
+  p <- ggplot(data, aes(x = Group, y = !!sym(y_var), fill = Group)) +
     geom_boxplot(width = 0.6, outlier.shape = NA) +
     geom_beeswarm(size = 2, cex = 3) +
-    labs(title = title, y = NULL, x = NULL) +
-    my_theme()
+    labs(title = title) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  stats <- run_stats(data, y_var)
+  if (!is.null(stats) && nrow(stats) > 0) {
+    p <- p + stat_pvalue_manual(
+      stats %>% filter(p.adj < 0.05),
+      label = "p.adj.signif",
+      tip.length = 0.01
+    )
+  }
+  p
 }
 
-# 3. Create all plots
-plots <- list(
-  "485_525/415_518" = create_plot(gm_df, "485_525/415_518", "Mitochondrial Function"),
-  "415_518/555_586" = create_plot(gm_df, "415_518/555_586", "Mitochondrial Calcium"),
-  "485_525/555_586" = create_plot(gm_df, "485_525/555_586", "Mitochondrial pH"),
-  "555_586/(370_470+555_586)" = create_plot(gm_df, "555_586/(370_470+555_586)", "Mitochondrial Volume")
+# 5. Generate plots using verified mapping
+plots <- map2(
+  names(ratio_mapping),
+  ratio_mapping,
+  ~ tryCatch({
+    create_plot(gm_df, .x, .y)
+  }, error = function(e) {
+    message("Plot failed: ", .x, "\nReason: ", e$message)
+    ggplot() + labs(title = paste("Error:", .x))
+  })
 )
 
-# 4. Combine with patchwork
+# 6. Combine and save
 final_plot <- wrap_plots(plots, ncol = 2) +
   plot_annotation(
-    title = "Multipanel Figure: Mitochondrial Function via Ratiometric Pericam",
+    title = "Mitochondrial Function Analysis",
     theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
-)
+  )
 
-# 5. Export (optional)
-ggsave("final_mitochondrial_analysis.png",
-       plot = final_plot,
-       width = 12,
-       height = 10,
-       dpi = 300)
+ggsave("final_analysis_robust.png", final_plot, width = 12, height = 10, dpi = 300)

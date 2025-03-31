@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
-file_path = r"C:\Users\t_rod\Box\SY5Y transduction Images\BioSpa_Data\Experiment_3_17_25\experiment 3_17_25\MT-Pericam_3_17_25_FCCP2.xlsx"
+file_path = r"C:\Users\Tyler\Box\SY5Y transduction Images\BioSpa_Data\Experiment_3_17_25\experiment 3_17_25\MT-Pericam_3_17_25_FCCP2.xlsx"
 wells = ['B3','B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10','C3', 'C4','C5', 'C6', 'C7', 'C8', 'C9', 'C10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10']
 
 # Define groups
@@ -163,33 +163,36 @@ print(merged_5trim)
 merged_5= merged_5trim
 
 merged_5 = merged_5.reset_index(drop=True)
-# Calculate z-scores independently for each column
-z_scores_485_525_415_518 = stats.zscore(merged_5['485_525/415_518'])
-z_scores_415_518_555_586 = stats.zscore(merged_5['415_518/555_586'])
-z_scores_485_525_555_586 = stats.zscore(merged_5['485_525/555_586'])
-z_scores_555_586_370_470 = stats.zscore(merged_5['555_586/(370_470+555_586)'])
-z_scores_Delta_F415_518 = stats.zscore(merged_5['Delta_F415_518/F0_415_518'])
-z_scores_Delta_F485_525 = stats.zscore(merged_5['Delta_F485_525/F0_485_525'])
-z_scores_Norm_485_525_415_518 = stats.zscore(merged_5['Norm_485_525/415_518'])
-z_scores_Norm_415_518_555_586 = stats.zscore(merged_5['Norm_415_518/555_586'])
-z_scores_Norm_485_525_555_586 = stats.zscore(merged_5['Norm_485_525/555_586'])
-z_scores_Norm_555_586_370_470 = stats.zscore(merged_5['Norm_555_586/(370_470+555_586)'])
 
-# Store the z-scores in a DataFrame (optional)
-z_scores_df = pd.DataFrame({
-    '485_525/415_518_zscore': z_scores_485_525_415_518,
-    '415_518/555_586_zscore': z_scores_415_518_555_586,
-    '485_525/555_586_zscore': z_scores_485_525_555_586,
-    '555_586/(370_470+555_586)_zscore': z_scores_555_586_370_470,
-    'Delta_F415_518/F0_415_518_zscore': z_scores_Delta_F415_518,
-    'Delta_F485_525/F0_485_525_zscore': z_scores_Delta_F485_525,
-    'Norm_485_525/415_518_zscore': z_scores_Norm_485_525_415_518,
-    'Norm_415_518/555_586_zscore': z_scores_Norm_415_518_555_586,
-    'Norm_485_525/555_586_zscore': z_scores_Norm_485_525_555_586,
-    'Norm_555_586/(370_470+555_586)_zscore': z_scores_Norm_555_586_370_470
-})
 
-# Print the z-scores DataFrame
+# Extract Vehicle group data
+vehicle_wells = groups['Vehicle (0.1% DMSO)']
+vehicle_data = merged_5[merged_5['Well'].isin(vehicle_wells)]
+
+# Columns to compute z-scores for
+columns = [
+    '485_525/415_518',
+    '415_518/555_586',
+    '485_525/555_586',
+    '555_586/(370_470+555_586)',
+    'Delta_F415_518/F0_415_518',
+    'Delta_F485_525/F0_485_525',
+    'Norm_485_525/415_518',
+    'Norm_415_518/555_586',
+    'Norm_485_525/555_586',
+    'Norm_555_586/(370_470+555_586)'
+]
+
+# Calculate z-scores using Vehicle group's mean and std
+z_scores_data = {}
+for col in columns:
+    vehicle_mean = vehicle_data[col].mean()
+    vehicle_std = vehicle_data[col].std()
+    z_scores = (merged_5[col] - vehicle_mean) / vehicle_std
+    z_scores_data[f'{col}_zscore'] = z_scores
+
+# Create DataFrame and print
+z_scores_df = pd.DataFrame(z_scores_data)
 print(z_scores_df)
 # Perform a left join to merge the 'Well' column from merged_5 with z_scores_df
 merged_with_wells = pd.merge(
@@ -265,7 +268,7 @@ import matplotlib.pyplot as plt
 
 
 # Function to plot a heatmap for a single plate
-def plot_plate_heatmap(ax, plate, title, vmin=-2, vmax=2, cmap='RdBu', ylabel_rotation=0):
+def plot_plate_heatmap(ax, plate, title, vmin=-10, vmax=10, cmap='RdBu', ylabel_rotation=0):
     sns.heatmap(plate, center = 0, vmin=vmin, vmax=vmax, annot=True, fmt=".2f", cmap=cmap, cbar=False,  # Disable individual colorbars
                 square=True, linewidths=0.5, linecolor='black', ax=ax)
     ax.set_title(title)
@@ -288,10 +291,10 @@ fig, axes = plt.subplots(2, 2, figsize=(16, 12))  # 2 rows, 2 columns of subplot
 axes = axes.ravel()  # Flatten the 2x2 array of axes for easy iteration
 
 # Plot each heatmap in a separate subplot
-plot_plate_heatmap(axes[0], plate_485_525_415_518, 'FCCP 485_525/415_518 Z-Scores')
-plot_plate_heatmap(axes[1], plate_415_518_555_586, 'FCCP 415_518/555_586 Z-Scores')
-plot_plate_heatmap(axes[2], plate_485_525_555_586, 'FCCP 485_525/555_586 Z-Scores')
-plot_plate_heatmap(axes[3], plate_555_586_370_470, 'FCCP 555_586/(370_470+555_586) Z-scores')
+plot_plate_heatmap(axes[0], plate_485_525_415_518, 'FCCP Mito Function 485_525/415_518 Z-Scores')
+plot_plate_heatmap(axes[1], plate_415_518_555_586, 'FCCP Mito Calcium 415_518/555_586 Z-Scores')
+plot_plate_heatmap(axes[2], plate_485_525_555_586, 'FCCP Mito pH 485_525/555_586 Z-Scores')
+plot_plate_heatmap(axes[3], plate_555_586_370_470, 'FCCP Mito Volume 555_586/(370_470+555_586) Z-scores')
 # plot_plate_heatmap(axes[4], plate_Norm_485_525_415_518, 'Norm FCCP 485_525/415_518 Z-Scores')
 # plot_plate_heatmap(axes[5],plate_Norm_415_518_555_586, 'Norm FCCP 415_518/555_586 Z-Scores')
 # plot_plate_heatmap(axes[6],plate_Norm_485_525_555_586, 'Norm FCCP 485_525/555_586 Z-Scores')
@@ -303,9 +306,10 @@ fig.colorbar(axes[0].collections[0], cax=cbar_ax)
 # Adjust layout to prevent overlap
 plt.tight_layout()
 plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.5, hspace=0.5)
+# Save the figure before showing it
+fig.savefig('zscore_heatmaps.png', dpi=300, bbox_inches='tight')  # Adjust filename/path as needed
+
 plt.show()
-
-
 
 #############KW#############
 
@@ -335,10 +339,27 @@ def create_plot(ax, data, y_col, title, ylabel):
     print(f"{title} - Dunn's test results:")
     print(dunn_results)
 
-    # Create the boxplot
-    sns.boxplot(data=data, x='Group', y=y_col, palette='husl', ax=ax)
-    # Overlay swarmplot to show individual data points
-    sns.swarmplot(data=data, x='Group', y=y_col, color='black', ax=ax, size=4)
+    # Define your desired group order (replace with your actual group names)
+    group_order = ["Vehicle (0.1% DMSO)", "0.1_uM_FCCP", "1_uM_FCCP","10_uM_FCCP"]  # Example
+
+
+    sns.boxplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        palette='husl',
+        ax=ax,
+        order=group_order  # <-- Control order here
+    )
+    sns.swarmplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        color='black',
+        ax=ax,
+        size=4,
+        order=group_order  # <-- Must match boxplot order
+    )
 
     # Function to convert p-values to asterisks
     def p_value_to_asterisks(p_value):
@@ -462,11 +483,27 @@ def create_plot(ax, data, y_col, title, ylabel):
     print(f"{title} - Holm-Sidak post hoc results:")
     print(holm_sidak_results)
 
-    # Create the boxplot
-    sns.boxplot(data=data, x='Group', y=y_col, palette='husl', ax=ax, width=0.6)
+    # Define your desired group order (replace with your actual group names)
+    group_order = ["Vehicle (0.1% DMSO)", "0.1_uM_FCCP", "1_uM_FCCP","10_uM_FCCP"]  # Example
 
-    # Overlay swarmplot to show individual data points
-    sns.swarmplot(data=data, x='Group', y=y_col, color='black', ax=ax, size=4)
+
+    sns.boxplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        palette='husl',
+        ax=ax,
+        order=group_order  # <-- Control order here
+    )
+    sns.swarmplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        color='black',
+        ax=ax,
+        size=4,
+        order=group_order  # <-- Must match boxplot order
+    )
 
     # Function to convert p-values to asterisks
     def p_value_to_asterisks(p_value):
@@ -541,7 +578,7 @@ plots = [
     },
     {
         'y_col': '555_586/(370_470+555_586)',
-        'title': 'Mitochondrial pH 3min exposure to FCCP',
+        'title': 'Mitochondrial volume 3min exposure to FCCP',
         'ylabel': 'Pericam Fluorescence Ratio (555_586/(370_470+555_586))'
     }
 ]
