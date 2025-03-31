@@ -3,12 +3,12 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 file_path = r"C:\Users\Tyler\Box\ReiterLab_Members\Tyler\Studies\MT_Pericam\2025-03-28\Sweeptest_FCCP_python.xlsx"
-wells = ['B3','B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10','C3', 'C4','C5', 'C6', 'C7', 'C8', 'C9', 'C10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10']
+wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', 'F7', 'F8', 'F9', 'F10','D3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10']
 
 # Define groups
 groups = {
-    'Vehicle (0.1% DMSO)': ['B3','B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'C3', 'C10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10'],
-    '1_uM_FCCP': ['C4','C5', 'C6', 'C7', 'C8', 'C9']
+    'Vehicle (0.1% DMSO)': ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'F3', 'F10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10'],
+    '1_uM_FCCP': ['F4','F5', 'F6', 'F7', 'F8', 'F9']
 }
 
 
@@ -24,7 +24,7 @@ def load_and_process(sheet_name, wavelength):
     print(f"📊 Initial columns: {df.columns.tolist()}")
 
     # # Calculate the average of each row (timepoint) for wells G3-10
-    # df['Background_Avg'] = df[background_wells].mean(axis=1)
+    # df['Gackground_Avg'] = df[background_wells].mean(axis=1)
 
     for well in wells:
         if well in df.columns:
@@ -50,9 +50,9 @@ print("🚀 STARTING DATA PROCESSING")
 print("=" * 50)
 
 wavelengths = {
-    'Sheet1': '370_470',
-    'Sheet2': '415_518',
-    'Sheet3': '485_525',
+    'Sheet3': '370_470',
+    'Sheet1': '415_518',
+    'Sheet2': '485_525',
     'Sheet4': '555_586'
 }
 merged = None
@@ -152,11 +152,11 @@ print(merged.head())
 
 # Filter the DataFrame to only include time points after the baseline (time > 0)
 merged = merged[merged['Time'] > baseline_time_point]
-wells = ['B3','B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10','C3', 'C4','C5', 'C6', 'C7', 'C8', 'C9', 'C10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10']
+wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', 'F7', 'F8', 'F9', 'F10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10']
 
 # Now 'merged' contains the new ratios and ΔF/F₀ values for time points after the baseline
 print(merged)
-merged_5 = merged[merged['Time'] == 10]
+merged_5 = merged[merged['Time'] == 5]
 merged_5trim = merged_5[merged_5['Well'].isin(wells)]
 print(merged_5trim)
 merged_5= merged_5trim
@@ -234,12 +234,12 @@ import matplotlib.pyplot as plt
 # def plot_plate_heatmap(ax, plate, title, cmap='RdBu'):
 #     plt.figure(figsize=(12, 8))
 #     sns.heatmap(plate, annot=True, fmt=".2f", cmap=cmap, cbar=True,
-#                 square=True, linewidths=0.5, linecolor='black',ax=ax)
+#                 square=True, linewidths=0.5, linecolor='Black',ax=ax)
 #     plt.title(title)
-#     plt.xlabel('Column (1-12)')
+#     plt.xlabel('Folumn (1-12)')
 #     plt.ylabel('Row (A-H)')
 #     plt.xticks(np.arange(12) + 0.5, labels=np.arange(1, 13))
-#     plt.yticks(np.arange(8) + 0.5, labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],rotation=0)
+#     plt.yticks(np.arange(8) + 0.5, labels=['A', 'G', 'F', 'D', 'E', 'F', 'G', 'H'],rotation=0)
 #     # Adjust tick spacing from the axes
 #     # Adjust the spacing between the heatmap and the axes
 #     plt.xlim(-0.25, 12.25)  # Extend x-axis limits
@@ -269,16 +269,16 @@ import matplotlib.pyplot as plt
 # Function to plot a heatmap for a single plate
 def plot_plate_heatmap(ax, plate, title, vmin=-10, vmax=10, cmap='RdBu', ylabel_rotation=0):
     sns.heatmap(plate, center = 0, vmin=vmin, vmax=vmax, annot=True, fmt=".2f", cmap=cmap, cbar=False,  # Disable individual colorbars
-                square=True, linewidths=0.5, linecolor='black', ax=ax)
+                square=True, linewidths=0.5, linecolor='Black', ax=ax)
     ax.set_title(title)
-    ax.set_xlabel('Column (1-12)')
+    ax.set_xlabel('Folumn (1-12)')
     ax.set_ylabel('Row (A-H)')
 
     # Set custom x and y ticks
     ax.set_xticks(np.arange(12) + 0.5)
     ax.set_xticklabels(np.arange(1, 13))
     ax.set_yticks(np.arange(8) + 0.5)
-    ax.set_yticklabels(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], rotation=ylabel_rotation)
+    ax.set_yticklabels(['A', 'G', 'F', 'D', 'E', 'F', 'G', 'H'], rotation=ylabel_rotation)
 
     # Adjust the spacing between the heatmap and the axes
     ax.set_xlim(-0.5, 12.5)  # Extend x-axis limits
@@ -334,7 +334,7 @@ def create_plot(ax, data, y_col, title, ylabel):
     print(f"{title} - Kruskal-Wallis p-value: {p_value}")
 
     # Perform Dunn's post hoc test
-    dunn_results = sp.posthoc_dunn(data, val_col=y_col, group_col='Group', p_adjust='bonferroni')
+    dunn_results = sp.posthoc_dunn(data, val_col=y_col, group_col='Group', p_adjust='Bonferroni')
     print(f"{title} - Dunn's test results:")
     print(dunn_results)
 
@@ -354,7 +354,7 @@ def create_plot(ax, data, y_col, title, ylabel):
         data=data,
         x='Group',
         y=y_col,
-        color='black',
+        color='Black',
         ax=ax,
         size=4,
         order=group_order  # <-- Must match boxplot order
@@ -402,8 +402,8 @@ def create_plot(ax, data, y_col, title, ylabel):
         asterisks = p_value_to_asterisks(p_adj)
 
         # Draw the line and annotation
-        ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-        ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+        ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+        ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
     # Add title and labels
     ax.set_title(title)
@@ -483,7 +483,7 @@ def create_plot(ax, data, y_col, title, ylabel):
     print(holm_sidak_results)
 
     # Define your desired group order (replace with your actual group names)
-    group_order = ["Vehicle (0.1% DMSO)", "0.1_uM_FCCP", "1_uM_FCCP","10_uM_FCCP"]  # Example
+
 
 
     sns.boxplot(
@@ -491,17 +491,16 @@ def create_plot(ax, data, y_col, title, ylabel):
         x='Group',
         y=y_col,
         palette='husl',
-        ax=ax,
-        order=group_order  # <-- Control order here
+        ax=ax
+
     )
     sns.swarmplot(
         data=data,
         x='Group',
         y=y_col,
-        color='black',
+        color='Black',
         ax=ax,
-        size=4,
-        order=group_order  # <-- Must match boxplot order
+        size=4
     )
 
     # Function to convert p-values to asterisks
@@ -546,8 +545,8 @@ def create_plot(ax, data, y_col, title, ylabel):
         asterisks = p_value_to_asterisks(p_adj)
 
         # Draw the line and annotation
-        ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-        ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+        ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+        ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
     # Add title and labels
     ax.set_title(title)
@@ -627,7 +626,7 @@ def create_plot(ax, data, y_col, title, ylabel):
     holm_sidak_results = None
 
     # Check for significant interaction effects
-    interaction_p = anova_table.loc['C(Group):C(Moi)', 'PR(>F)']
+    interaction_p = anova_table.loc['F(Group):C(Moi)', 'PR(>F)']
     if interaction_p < 0.05:
         print(f"Significant interaction effect between Group and Moi (p = {interaction_p})")
         # Perform pairwise t-tests with Holm-Sidak correction for interaction
@@ -639,7 +638,7 @@ def create_plot(ax, data, y_col, title, ylabel):
     sns.boxplot(data=data, x='Group', y=y_col, palette='husl', hue='Moi', ax=ax)
 
     # Overlay swarmplot to show individual data points in black
-    sns.swarmplot(data=data, x='Group', y=y_col, color='black', hue='Moi', legend=False, ax=ax, size=4, dodge=True)
+    sns.swarmplot(data=data, x='Group', y=y_col, color='Black', hue='Moi', legend=False, ax=ax, size=4, dodge=True)
 
     # Function to convert p-values to asterisks
     def p_value_to_asterisks(p_value):
@@ -684,8 +683,8 @@ def create_plot(ax, data, y_col, title, ylabel):
             asterisks = p_value_to_asterisks(p_adj)
 
             # Draw the line and annotation
-            ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-            ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+            ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+            ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
     # Add title and labels
     ax.set_title(title)
@@ -748,7 +747,7 @@ h_stat, p_value = kruskal(*groups2)
 print(f"Kruskal-Wallis p-value: {p_value}")
 
 # Perform Dunn's post hoc test
-dunn_results = sp.posthoc_dunn(gm_df, val_col='485_525/415_518', group_col='Group', p_adjust='bonferroni')
+dunn_results = sp.posthoc_dunn(gm_df, val_col='485_525/415_518', group_col='Group', p_adjust='Bonferroni')
 print("Dunn's test results:")
 print(dunn_results)
 
@@ -797,8 +796,8 @@ for idx, ((group1, group2), p_adj) in enumerate(significant_pairs):
     asterisks = p_value_to_asterisks(p_adj)
 
     # Draw the line and annotation
-    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
 # Add title and labels
 plt.title('Mitochondrial Function 3min exposure to FCCP')
@@ -825,7 +824,7 @@ h_stat, p_value = kruskal(*groups2)
 print(f"Kruskal-Wallis p-value: {p_value}")
 
 # Perform Dunn's post hoc test
-dunn_results = sp.posthoc_dunn(gm_df, val_col='415_518/555_586', group_col='Group', p_adjust='bonferroni')
+dunn_results = sp.posthoc_dunn(gm_df, val_col='415_518/555_586', group_col='Group', p_adjust='Bonferroni')
 print("Dunn's test results:")
 print(dunn_results)
 
@@ -874,8 +873,8 @@ for idx, ((group1, group2), p_adj) in enumerate(significant_pairs):
     asterisks = p_value_to_asterisks(p_adj)
 
     # Draw the line and annotation
-    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
 # Add title and labels
 plt.title('Mitochondrial Calcium 3min exposure to FCCP')
@@ -905,7 +904,7 @@ h_stat, p_value = kruskal(*groups2)
 print(f"Kruskal-Wallis p-value: {p_value}")
 
 # Perform Dunn's post hoc test
-dunn_results = sp.posthoc_dunn(gm_df, val_col='485_525/555_586', group_col='Group', p_adjust='bonferroni')
+dunn_results = sp.posthoc_dunn(gm_df, val_col='485_525/555_586', group_col='Group', p_adjust='Bonferroni')
 print("Dunn's test results:")
 print(dunn_results)
 
@@ -954,8 +953,8 @@ for idx, ((group1, group2), p_adj) in enumerate(significant_pairs):
     asterisks = p_value_to_asterisks(p_adj)
 
     # Draw the line and annotation
-    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
 # Add title and labels
 plt.title('Mitochondrial pH 3min exposure to FCCP')
@@ -983,7 +982,7 @@ h_stat, p_value = kruskal(*groups2)
 print(f"Kruskal-Wallis p-value: {p_value}")
 
 # Perform Dunn's post hoc test
-dunn_results = sp.posthoc_dunn(gm_df, val_col='555_586/(370_470+555_586)', group_col='Group', p_adjust='bonferroni')
+dunn_results = sp.posthoc_dunn(gm_df, val_col='555_586/(370_470+555_586)', group_col='Group', p_adjust='Bonferroni')
 print("Dunn's test results:")
 print(dunn_results)
 
@@ -1032,8 +1031,8 @@ for idx, ((group1, group2), p_adj) in enumerate(significant_pairs):
     asterisks = p_value_to_asterisks(p_adj)
 
     # Draw the line and annotation
-    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+    ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='Black')
+    ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='Black', fontsize=12)
 
 # Add title and labels
 plt.title('Mitochondrial pH 3min exposure to FCCP')

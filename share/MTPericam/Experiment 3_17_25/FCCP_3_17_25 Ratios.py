@@ -327,29 +327,33 @@ group_df = pd.DataFrame([(well, group) for group, wells in groups.items() for we
 # Merge the group information into the target DataFrame
 gm_df = pd.merge(merged_5trim, group_df, on='Well', how='left')
 
-# Function to create a single plot
+
 def create_plot(ax, data, y_col, title, ylabel):
-    # Perform Kruskal-Wallis test (non-parametric alternative to ANOVA)
-    groups = [data[data['Group'] == group][y_col] for group in data['Group'].unique()]
+    # Define your desired group order FIRST
+    group_order = ["Vehicle (0.1% DMSO)", "0.1_uM_FCCP", "1_uM_FCCP", "10_uM_FCCP"]
+
+    # Filter data to only include groups in our specified order
+    data = data[data['Group'].isin(group_order)]
+
+    # Perform Kruskal-Wallis test using our specified group order
+    groups = [data[data['Group'] == group][y_col] for group in group_order if group in data['Group'].unique()]
     h_stat, p_value = kruskal(*groups)
     print(f"{title} - Kruskal-Wallis p-value: {p_value}")
 
-    # Perform Dunn's post hoc test
+    # Perform Dunn's test and reindex to match our group order
     dunn_results = sp.posthoc_dunn(data, val_col=y_col, group_col='Group', p_adjust='bonferroni')
+    dunn_results = dunn_results.reindex(index=group_order, columns=group_order)  # Force correct order
     print(f"{title} - Dunn's test results:")
     print(dunn_results)
 
-    # Define your desired group order (replace with your actual group names)
-    group_order = ["Vehicle (0.1% DMSO)", "0.1_uM_FCCP", "1_uM_FCCP","10_uM_FCCP"]  # Example
-
-
+    # Create plots with specified order
     sns.boxplot(
         data=data,
         x='Group',
         y=y_col,
         palette='husl',
         ax=ax,
-        order=group_order  # <-- Control order here
+        order=group_order
     )
     sns.swarmplot(
         data=data,
@@ -358,10 +362,10 @@ def create_plot(ax, data, y_col, title, ylabel):
         color='black',
         ax=ax,
         size=4,
-        order=group_order  # <-- Must match boxplot order
+        order=group_order
     )
 
-    # Function to convert p-values to asterisks
+    # Convert p-values to asterisks
     def p_value_to_asterisks(p_value):
         if p_value < 0.001:
             return '***'
@@ -370,43 +374,44 @@ def create_plot(ax, data, y_col, title, ylabel):
         elif p_value < 0.05:
             return '*'
         else:
-            return 'ns'  # Not significant
+            return 'ns'
 
-    # Extract significant pairs and p-values from Dunn's test results
+    # Get significant pairs using our group order
     significant_pairs = []
-    groups = data['Group'].unique()
-    for i, group1 in enumerate(groups):
-        for j, group2 in enumerate(groups):
-            if i < j:  # Avoid duplicate comparisons
+    for i, group1 in enumerate(group_order):
+        for j, group2 in enumerate(group_order):
+            if i < j and group1 in dunn_results.index and group2 in dunn_results.columns:
                 p_adj = dunn_results.loc[group1, group2]
-                if p_adj < 0.05:  # Only include significant pairs
+                if p_adj < 0.05:
                     significant_pairs.append(((group1, group2), p_adj))
 
-    # Get the y-coordinates of the top of each box
-    box_tops = [max(data[data['Group'] == group][y_col]) for group in groups]
+    # Get box positions based on our specified order
+    box_positions = np.arange(len(group_order))
+    box_tops = [data[data['Group'] == group][y_col].max() for group in group_order]
 
-    # Adjust the y-axis scale to make more room for annotations
-    y_max = max(box_tops)  # Maximum y-value of the boxes
-    ax.set_ylim(top=y_max * 1.2)  # Increase the upper limit by 30%
+    # Adjust y-axis limits
+    y_max = max(box_tops)
+    ax.set_ylim(top=y_max * 1.3)
 
-    # Manually annotate the plot with significant pairs
-    spacing_factor = 0.04  # Vertical spacing between lines (adjust as needed)
+    # Draw annotations using correct positions
     for idx, ((group1, group2), p_adj) in enumerate(significant_pairs):
-        x1 = groups.tolist().index(group1)  # Get x-position of group1
-        x2 = groups.tolist().index(group2)  # Get x-position of group2
-        y1 = box_tops[x1]  # Top of the box for group1
-        y2 = box_tops[x2]  # Top of the box for group2
-        y_max_box = max(y1, y2)  # Use the higher of the two box tops
-        y = y_max_box + (idx + 1) * spacing_factor * y_max  # Adjust y-position for annotation
+        x1 = group_order.index(group1)
+        x2 = group_order.index(group2)
 
-        # Convert p-value to asterisks
-        asterisks = p_value_to_asterisks(p_adj)
+        # Calculate vertical position
+        y_height = y_max * (1 + 0.1 * (idx + 1))
+        bracket_height = y_max * 0.05
 
-        # Draw the line and annotation
-        ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-        ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+        # Draw line
+        ax.plot([x1, x1, x2, x2],
+                [y_height, y_height + bracket_height, y_height + bracket_height, y_height],
+                lw=1.5, color='black')
 
-    # Add title and labels
+        # Add text
+        ax.text((x1 + x2) / 2, y_height + bracket_height * 1.2,
+                p_value_to_asterisks(p_adj),
+                ha='center', va='bottom', fontsize=12)
+
     ax.set_title(title)
     ax.set_xlabel('Group')
     ax.set_ylabel(ylabel)
@@ -505,7 +510,7 @@ def create_plot(ax, data, y_col, title, ylabel):
         order=group_order  # <-- Must match boxplot order
     )
 
-    # Function to convert p-values to asterisks
+    # Convert p-values to asterisks
     def p_value_to_asterisks(p_value):
         if p_value < 0.001:
             return '***'
@@ -514,47 +519,47 @@ def create_plot(ax, data, y_col, title, ylabel):
         elif p_value < 0.05:
             return '*'
         else:
-            return 'ns'  # Not significant
+            return 'ns'
 
-    # Extract significant pairs and p-values from Holm-Sidak results
+    # Get significant pairs using our group order
     significant_pairs = []
-    groups = data['Group'].unique()
-    for i, group1 in enumerate(groups):
-        for j, group2 in enumerate(groups):
-            if i < j:  # Avoid duplicate comparisons
+    for i, group1 in enumerate(group_order):
+        for j, group2 in enumerate(group_order):
+            if i < j and group1 in holm_sidak_results.index and group2 in holm_sidak_results.columns:
                 p_adj = holm_sidak_results.loc[group1, group2]
-                if p_adj < 0.05:  # Only include significant pairs
+                if p_adj < 0.05:
                     significant_pairs.append(((group1, group2), p_adj))
 
-    # Get the y-coordinates of the top of each box
-    box_tops = [max(data[data['Group'] == group][y_col]) for group in groups]
+    # Get box positions based on our specified order
+    box_positions = np.arange(len(group_order))
+    box_tops = [data[data['Group'] == group][y_col].max() for group in group_order]
 
-    # Adjust the y-axis scale to make more room for annotations
-    y_max = max(box_tops)  # Maximum y-value of the boxes
-    ax.set_ylim(top=y_max * 1.3)  # Increase the upper limit by 30%
+    # Adjust y-axis limits
+    y_max = max(box_tops)
+    ax.set_ylim(top=y_max * 1.3)
 
-    # Manually annotate the plot with significant pairs
-    spacing_factor = 0.04  # Vertical spacing between lines (adjust as needed)
+    # Draw annotations using correct positions
     for idx, ((group1, group2), p_adj) in enumerate(significant_pairs):
-        x1 = groups.tolist().index(group1)  # Get x-position of group1
-        x2 = groups.tolist().index(group2)  # Get x-position of group2
-        y1 = box_tops[x1]  # Top of the box for group1
-        y2 = box_tops[x2]  # Top of the box for group2
-        y_max_box = max(y1, y2)  # Use the higher of the two box tops
-        y = y_max_box + (idx + 1) * spacing_factor * y_max  # Adjust y-position for annotation
+        x1 = group_order.index(group1)
+        x2 = group_order.index(group2)
 
-        # Convert p-value to asterisks
-        asterisks = p_value_to_asterisks(p_adj)
+        # Calculate vertical position
+        y_height = y_max * (1 + 0.1 * (idx + 1))
+        bracket_height = y_max * 0.05
 
-        # Draw the line and annotation
-        ax.plot([x1, x1, x2, x2], [y, y + 0.02 * y_max, y + 0.02 * y_max, y], lw=1.5, color='black')
-        ax.text((x1 + x2) * 0.5, y + 0.03 * y_max, asterisks, ha='center', va='bottom', color='black', fontsize=12)
+        # Draw line
+        ax.plot([x1, x1, x2, x2],
+                [y_height, y_height + bracket_height, y_height + bracket_height, y_height],
+                lw=1.5, color='black')
 
-    # Add title and labels
+        # Add text
+        ax.text((x1 + x2) / 2, y_height + bracket_height * 1.2,
+                p_value_to_asterisks(p_adj),
+                ha='center', va='bottom', fontsize=12)
+
     ax.set_title(title)
     ax.set_xlabel('Group')
     ax.set_ylabel(ylabel)
-
 # Create a multipanel figure
 fig, axes = plt.subplots(2, 2, figsize=(18, 14))  # 2 rows, 2 columns
 fig.suptitle('Multipanel Figure: Mitochondrial Function and Calcium', fontsize=16)
