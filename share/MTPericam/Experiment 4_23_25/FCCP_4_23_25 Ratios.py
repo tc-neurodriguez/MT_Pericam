@@ -2,13 +2,51 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
-file_path = r"C:\Users\t_rod\Box\ReiterLab_Members\Tyler\Studies\MT_Pericam\2025-03-28\Sweeptest_FCCP_python.xlsx"
-wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', 'F7', 'F8', 'F9', 'F10','D3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10']
+file_path = r"C:\Users\t_rod\Box\ReiterLab_Members\Tyler\Studies\MT_Pericam\2025_04_23\MT_Pericam_4_23_25_FCCP_Sweeppy.xlsx"
+# wells = ['A2','A3','A4','A5','A6','A7','A8', 'A9', 'A10', 'A11',
+#          'B2','B3','B4','B5','B6','B7','B8', 'B9', 'B10', 'B11',
+#          'C2','C3','C4','C5','C6','C7','C8', 'C9', 'C10', 'C11',
+#          'D2','D3','D4','D5','D6','D7','D8', 'D9', 'D10', 'D11',
+#          'E2','E3','E4','E5','E6','E7','E8', 'E10', 'E11','E12',
+#          'F2','F3','F4','F5','F6','F7','F8', 'F9', 'F10', 'F11',
+#          'G2','G3','G4','G5','G6','G7','G8', 'G9', 'G10', 'G11',
+#          'H2','H3','H4','H5','H6','H7','H8', 'H9', 'H10', 'H11']
 
-# Define groups
+wells = [
+         'B2','B3','B4','B5','B6','B7','B8', 'B9', 'B10', 'B11',
+         'C2','C3','C4','C5','C6','C7','C8', 'C9', 'C10', 'C11',
+         'D2','D3','D4','D5','D6','D7','D8', 'D9', 'D10', 'D11',
+         'E2','E3','E4','E5','E6','E7','E8', 'E10', 'E11',
+         'F2','F3','F4','F5','F6','F7','F8', 'F9', 'F10', 'F11',
+         'G2','G3','G4','G5','G6','G7','G8', 'G9', 'G10', 'G11'
+         ]
+# # Define groups
+# groups = {
+#     'Vehicle (0.1% DMSO)': ['A2','A3','A7','A8', 'A9', 'A10', 'A11',
+#          'B2','B3','B7','B8', 'B9', 'B10', 'B11',
+#          'C2','C3','C7','C8', 'C9', 'C10', 'C11',
+#          'D2','D3','D7','D8', 'D9', 'D10', 'D11',
+#          'E2','E3','E7','E8', 'E10', 'E11','E12',
+#          'F2','F3','F7','F8', 'F9', 'F10', 'F11',
+#          'G2','G3','G7','G8', 'G9', 'G10', 'G11',
+#          'H2','H3','H7','H8', 'H9', 'H10', 'H11'],
+#     '0.1_uM_FCCP': ['A4','B4','C4','D4','E4','F4','G4','H4'],
+#     '1_uM_FCCP': ['A5','B5','C5','D5','E5','F5','G5','H5'],
+#     '10_uM_FCCP': ['A6','B6','C6','D6','E6','F6','G6','H6']
+# }
+
 groups = {
-    'Vehicle (0.1% DMSO)': ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'F3', 'F10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10'],
-    '1_uM_FCCP': ['F4','F5', 'F6', 'F7', 'F8', 'F9']
+    'Vehicle (0.1% DMSO)': [
+         'B2','B3','B7','B8', 'B9', 'B10', 'B11',
+         'C2','C3','C7','C8', 'C9', 'C10', 'C11',
+         'D2','D3','D7','D8', 'D9', 'D10', 'D11',
+         'E2','E3','E7','E8', 'E10', 'E11',
+         'F2','F3','F7','F8', 'F9', 'F10', 'F11',
+         'G2','G3','G7','G8', 'G9', 'G10', 'G11',
+         ],
+    '0.1_uM_FCCP': ['B4','C4','D4','E4','F4','G4'],
+    '1_uM_FCCP': ['B5','C5','D5','E5','F5','G5'],
+    '10_uM_FCCP': ['B6','C6','D6','E6','F6','G6']
 }
 
 
@@ -152,11 +190,11 @@ print(merged.head())
 
 # Filter the DataFrame to only include time points after the baseline (time > 0)
 merged = merged[merged['Time'] > baseline_time_point]
-wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', 'F7', 'F8', 'F9', 'F10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10']
+wells = wells
 
 # Now 'merged' contains the new ratios and ΔF/F₀ values for time points after the baseline
 print(merged)
-merged_5 = merged[merged['Time'] == 5]
+merged_5 = merged[merged['Time'] == 15]
 merged_5trim = merged_5[merged_5['Well'].isin(wells)]
 print(merged_5trim)
 merged_5= merged_5trim
@@ -271,7 +309,7 @@ def plot_plate_heatmap(ax, plate, title, vmin=-10, vmax=10, cmap='RdBu', ylabel_
     sns.heatmap(plate, center = 0, vmin=vmin, vmax=vmax, annot=True, fmt=".2f", cmap=cmap, cbar=False,  # Disable individual colorbars
                 square=True, linewidths=0.5, linecolor='Black', ax=ax)
     ax.set_title(title)
-    ax.set_xlabel('Folumn (1-12)')
+    ax.set_xlabel('Column (1-12)')
     ax.set_ylabel('Row (A-H)')
 
     # Set custom x and y ticks
