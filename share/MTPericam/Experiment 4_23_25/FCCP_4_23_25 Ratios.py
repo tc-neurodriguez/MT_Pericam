@@ -494,8 +494,6 @@ plt.show()
 
 
 
-
-
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -628,6 +626,180 @@ plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust layout to make room for the sup
 plt.show()
 
 
+
+
+
+
+
+#####################Ttest ###############
+
+import scipy.stats as sp
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+wells = [
+         'B2','B3','B6','B7', 'B10', 'B11',
+         'C3','C6','C7','C8', 'C9', 'C10', 'C11',
+         'D2','D3','D6','D7','D8', 'D9', 'D10', 'D11',
+         'E2','E3','E6','E7','E8','E10', 'E11',
+         'F2','F3','F6','F7','F8', 'F9', 'F10', 'F11',
+         'G2','G3','G6','G7','G8', 'G9', 'G10', 'G11'
+         ]
+
+
+
+
+groups = {
+    'Vehicle (0.1% DMSO)': [
+         'B2','B3','B7', 'B10', 'B11',
+         'C3','C7','C8', 'C9', 'C10', 'C11',
+         'D2','D3','D7','D8', 'D9', 'D10', 'D11',
+         'E2','E3','E7','E8', 'E10', 'E11',
+         'F2','F3','F7','F8', 'F9', 'F10', 'F11',
+         'G2','G3','G7','G8', 'G9', 'G10', 'G11',
+         ],
+    '10_uM_FCCP': ['B6','C6','D6','E6','F6','G6']
+}
+
+
+# Convert the groups dictionary into a DataFrame
+group_df = pd.DataFrame([(well, group) for group, wells in groups.items() for well in wells],
+                        columns=['Well', 'Group'])
+
+# Merge the group information into the target DataFrame
+gm_df = pd.merge(merged_5trim, group_df, on='Well', how='left')
+
+gm_clean = gm_df.dropna(subset = ['Group'])
+
+
+def create_plot(ax, ax_hist, data, y_col, title, ylabel):
+    # Check if there are exactly 2 groups
+    groups = data['Group'].unique()  # Changed from gm_clean to data
+    if len(groups) != 2:
+        raise ValueError("This function only supports comparisons between exactly 2 groups.")
+
+    group1, group2 = groups
+    group1_data = data[data['Group'] == group1][y_col]
+    group2_data = data[data['Group'] == group2][y_col]
+
+    # Perform independent t-test
+    t_stat, p_value = sp.ttest_ind(group1_data, group2_data)
+    print(f"{title} - t-test results (Group {group1} vs Group {group2}):")
+    print(f"t = {t_stat:.3f}, p = {p_value:.4f}")
+
+    # Plot boxplot and swarmplot
+    sns.boxplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        palette=[(1,0,1),(0,1,1)],
+        ax=ax
+    )
+    sns.swarmplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        color='Black',
+        ax=ax,
+        size=4
+    )
+
+    # Convert p-value to asterisks
+    def p_value_to_asterisks(p_value):
+        if p_value < 0.001:
+            return '***'
+        elif p_value < 0.01:
+            return '**'
+        elif p_value < 0.05:
+            return '*'
+        else:
+            return 'ns'  # Not significant
+
+    asterisks = p_value_to_asterisks(p_value)
+
+    # Get the y-coordinates of the top of each box
+    box_tops = [max(data[data['Group'] == group][y_col]) for group in groups]
+    y_max = max(box_tops)
+    ax.set_ylim(top=y_max * 1.3)  # Add space for annotation
+
+    # Draw significance annotation if p < 0.05
+    if p_value < 0.05:
+        x1, x2 = 0, 1  # Positions of group1 and group2 on x-axis
+        y_line = y_max * 1.1  # Height of the horizontal line
+        y_text = y_max * 1.15  # Height of the asterisks
+
+        # Draw the line
+        ax.plot([x1, x1, x2, x2], [y_line, y_text, y_text, y_line], lw=1.5, color='Black')
+        # Add asterisks
+        ax.text((x1 + x2) * 0.5, y_text + 0.02 * y_max, asterisks,
+                ha='center', va='bottom', color='Black', fontsize=12)
+
+    # Add title and labels
+    ax.set_title(title)
+    ax.set_xlabel('Group')
+    ax.set_ylabel(ylabel)
+    # --- Z-Score Histogram (Test Group vs Control Distribution) ---
+    # --- Updated Distribution Plot ---
+
+
+    # Calculate z-scores
+    mean_ctrl = np.mean(group1_data)
+    std_ctrl = np.std(group1_data, ddof=1)
+    z_test = (group2_data - mean_ctrl) / std_ctrl
+    z_ctrl = (group1_data - mean_ctrl) / std_ctrl  # Control group z-scores (centered at 0)
+
+    # Plot KDE curves (no histograms)
+    sns.kdeplot(z_ctrl, ax=ax_hist, color=(1,0,1), label=f'{group1} (control)')
+    sns.kdeplot(z_test, ax=ax_hist, color=(0,1,1), label=f'{group2}')
+
+    # Formatting
+    ax_hist.set_title(f"KDE of Z-Score Distributions")
+    ax_hist.set_xlabel("Z-score")
+    ax_hist.legend()
+    #ax_hist.axvline(0, color='blue', linestyle=':', alpha=0.5)  # Reference line at control mean
+
+
+
+
+# Create figure with 2 columns
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))  # Now axes has two elements: axes[0] and axes[1]
+fig.suptitle('Multipanel Figure: Mitochondrial Function and Calcium', fontsize=16)
+
+# Define plot parameters
+plots = [
+    {
+        'y_col': '415_518/555_586',
+        'title': 'Mitochondrial Calcium 3min exposure to FCCP',
+        'ylabel': 'Pericam Fluorescence Ratio (415_518/555_586)'
+    },
+    {
+        'y_col': '485_525/555_586',
+        'title': 'Mitochondrial pH 3min exposure to FCCP',
+        'ylabel': 'Pericam Fluorescence Ratio (485_525/555_586)'
+    }
+]
+
+
+# Create plots in 2x2 grid
+for i, plot in enumerate(plots):
+    # Left column: Boxplots (row 0 and row 1)
+    create_plot(ax=axes[i, 0],
+               ax_hist=axes[i, 1],  # Right column for distribution plots
+               data=gm_clean,
+               y_col=plot['y_col'],
+               title=plot['title'],
+               ylabel=plot['ylabel'])
+
+# Adjust layout
+plt.tight_layout(rect=[0, 0, 1, 0.96])  # Make room for suptitle
+plt.show()
+
+
+
+
+
 # Convert the groups dictionary into a DataFrame
 group_df = pd.DataFrame([(well, group) for group, wells in groups.items() for well in wells],
                         columns=['Well', 'Group'])
@@ -730,7 +902,7 @@ def create_plot(ax, data, y_col, title, ylabel):
     ax.set_ylabel(ylabel)
 # Create a multipanel figure
 fig, axes = plt.subplots(2, 2, figsize=(18, 14))  # 2 rows, 2 columns
-fig.suptitle('Multipanel Figure: Mitochondrial Function via Ratiometric Pericam', fontsize=16)
+fig.suptitle('Hela Cell Mitochondrial Function via Ratiometric Pericam', fontsize=16)
 
 plots = [
     {
