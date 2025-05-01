@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
-file_path = r"C:\Users\t_rod\Box\ReiterLab_Members\Tyler\Studies\MT_Pericam\2025-03-28\Sweeptest_FCCP_python.xlsx"
-wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', 'F7', 'F8', 'F9', 'F10','D3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10']
+file_path = r"C:\Users\Tyler\Box\ReiterLab_Members\Tyler\Studies\MT_Pericam\2025-03-28\Sweeptest_FCCP_python.xlsx"
+wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', 'F7', 'F8', 'F9', 'F10','D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10']
 
 # Define groups
 groups = {
@@ -156,7 +156,7 @@ wells = ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','F3', 'F4','F5', 'F6', '
 
 # Now 'merged' contains the new ratios and ΔF/F₀ values for time points after the baseline
 print(merged)
-merged_5 = merged[merged['Time'] == 5]
+merged_5 = merged[merged['Time'] == 10]
 merged_5trim = merged_5[merged_5['Well'].isin(wells)]
 print(merged_5trim)
 merged_5= merged_5trim
@@ -601,6 +601,298 @@ moi_df = pd.DataFrame([(well, group) for group, wells in moi_groups.items() for 
 # Merge the group information into the target DataFrame
 gm_dfb = pd.merge(merged_5trim, group_df, on='Well', how='left')
 gm_df = pd.merge(gm_dfb, moi_df, on='Well', how='left')
+
+############################
+#############################
+####ttest################
+
+# Define groups
+groups = {
+    'Vehicle (0.1% DMSO)': ['G3','G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'F3', 'F10','D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10','E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10'],
+    '1_uM_FCCP': ['F4','F5', 'F6', 'F7', 'F8', 'F9']
+}
+# Add these at the TOP of your script
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import matplotlib.patheffects as patheffects
+import numpy as np
+import matplotlib as mpl
+import scipy.stats as sp
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+
+
+# Convert the groups dictionary into a DataFrame
+group_df = pd.DataFrame([(well, group) for group, wells in groups.items() for well in wells],
+                        columns=['Well', 'Group'])
+
+# Merge the group information into the target DataFrame
+gm_df = pd.merge(merged_5trim, group_df, on='Well', how='left')
+
+gm_clean = gm_df.dropna(subset = ['Group'])
+# Convert groups to categorical with specified order
+gm_clean['Group'] = pd.Categorical(gm_clean['Group'], categories=['Vehicle (0.1% DMSO)', '1_uM_FCCP'], ordered=True)
+print(f"Group order: {groups}")  # Should always show ['Vehicle', 'FCCP']
+
+# MUST BE SET BEFORE IMPORTING PYLAB
+mpl.use('PDF')  # Force vector backend
+mpl.rcParams['pdf.fonttype'] = 42  # TrueType fonts
+mpl.rcParams['ps.fonttype'] = 42
+mpl.rcParams['svg.fonttype'] = 'none'
+mpl.rcParams['text.usetex'] = False  # Important for editability
+
+def create_plot(ax, ax_hist, data, y_col, title, ylabel, save_path=None, dpi=600):
+    # Check if there are exactly 2 groups
+    groups = data['Group'].cat.categories.tolist()
+    if len(groups) != 2:
+        raise ValueError("This function only supports comparisons between exactly 2 groups.")
+
+    # Explicitly define control and test groups
+    group1, group2 = groups[0], groups[1]  # Vehicle, FCCP (from categorical order)
+    group1_data = data[data['Group'] == group1][y_col]
+    group2_data = data[data['Group'] == group2][y_col]
+    print(f"Group order: {groups}")  # Should always show ['Vehicle', 'FCCP']
+    # Perform independent t-test
+    t_stat, p_value = sp.ttest_ind(group1_data, group2_data)
+    print(f"{title} - t-test results (Group {group1} vs Group {group2}):")
+    print(f"t = {t_stat:.3f}, p = {p_value:.4f}")
+
+    # Plot boxplot and swarmplot
+    sns.boxplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        palette=[(1,0,1),(0,1,1)],
+        linewidth=0.25,
+        ax=ax
+    )
+    sns.swarmplot(
+        data=data,
+        x='Group',
+        y=y_col,
+        color='Black',
+        ax=ax,
+        size=4,
+        rasterized=False
+    )
+
+    # Convert p-value to asterisks
+    def p_value_to_asterisks(p_value):
+        if p_value < 0.001:
+            return '***'
+        elif p_value < 0.01:
+            return '**'
+        elif p_value < 0.05:
+            return '*'
+        else:
+            return 'ns'  # Not significant
+
+    asterisks = p_value_to_asterisks(p_value)
+
+    # Get the y-coordinates of the top of each box
+    box_tops = [max(data[data['Group'] == group][y_col]) for group in groups]
+    y_max = max(box_tops)
+    ax.set_ylim(top=y_max * 1.3)  # Add space for annotation
+
+    # Draw significance annotation if p < 0.05
+    if p_value < 0.05:
+        x1, x2 = 0, 1  # Positions of group1 and group2 on x-axis
+        y_line = y_max * 1.1  # Height of the horizontal line
+        y_text = y_max * 1.15  # Height of the asterisks
+
+        # Draw the line
+        ax.plot([x1, x1, x2, x2], [y_line, y_text, y_text, y_line], lw=1.5, color='Black')
+        # Add asterisks
+        ax.text((x1 + x2) * 0.5, y_text + 0.02 * y_max, asterisks,
+                ha='center', va='bottom', color='Black', fontsize=12)
+
+    # Add title and labels
+    ax.set_title(title)
+    ax.set_xlabel('Group')
+    ax.set_ylabel(ylabel)
+    # --- Z-Score Histogram (Test Group vs Control Distribution) ---
+    # --- Updated Distribution Plot ---
+    print(f"Group order: {groups}")  # Should always show ['Vehicle', 'FCCP']
+    group1_data = data[data['Group'] == group1][y_col]
+    group2_data = data[data['Group'] == group2][y_col]
+    print(f"Group order: {groups}")  # Should always show ['Vehicle', 'FCCP']
+    # Calculate z-scores
+    mean_ctrl = np.mean(group1_data)
+    std_ctrl = np.std(group1_data, ddof=1)
+    z_test = (group2_data - mean_ctrl) / std_ctrl
+    z_ctrl = (group1_data - mean_ctrl) / std_ctrl  # Control group z-scores (centered at 0)
+
+    # Plot KDE curves (no histograms)
+    sns.kdeplot(z_ctrl, ax=ax_hist, color=(1,0,1), fill=True, alpha = 0.2,rasterized=False  ,bw_adjust=1,label=f'{group1} (control)')
+    sns.kdeplot(z_test, ax=ax_hist, color=(0,1,1), fill=True, alpha = 0.2,rasterized=False  ,bw_adjust=1,label=f'{group2}')
+
+    # Formatting
+    ax_hist.set_title(f"KDE of Z-Score Distributions")
+    ax_hist.set_xlabel("Z-score")
+    ax_hist.legend()
+    #ax_hist.axvline(0, color='blue', linestyle=':', alpha=0.5)  # Reference line at control mean
+    # Save and close
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    # After creating plots:
+    plt.close()
+
+
+
+def save_editable_pdf(fig, save_path):
+    """Saves the complete figure as one editable PDF"""
+    # Set backend and font settings for editable PDF
+    import matplotlib
+    matplotlib.use('SVG')
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    plt.rcParams['svg.fonttype'] = 'none'
+
+    # Ensure vector output for all elements
+    for ax in fig.get_axes():
+        for artist in ax.get_children():
+            if hasattr(artist, 'set_rasterized'):
+                artist.set_rasterized(False)
+
+    # Save with editability options
+    fig.savefig(
+        save_path,
+        format='pdf',
+        dpi=600,
+        bbox_inches='tight',
+        transparent=True,
+        metadata={
+            'Creator': 'Your Name',
+            'Title': 'Mitochondrial Analysis',
+            'Keywords': 'Science, Biology'
+        }
+    )
+    print(f"Saved editable PDF to: {save_path}")
+
+
+# Main plotting function
+def create_and_save_figure(data, plot_configs, output_path):
+    # Create figure
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    fig.suptitle('Mitochondrial Function and Calcium', fontsize=16)
+
+    # Create plots
+    for i, config in enumerate(plot_configs):
+        create_plot(
+            ax=axes[i, 0],
+            ax_hist=axes[i, 1],
+            data=data,
+            y_col=config['y_col'],
+            title=config['title'],
+            ylabel=config['ylabel']
+        )
+
+    # Final adjustments and save
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    save_editable_pdf(fig, output_path)
+    plt.close()
+
+
+def create_and_save_figure(data, plot_configs, heatmap_data, output_path):
+    # Create main figure with combined layout
+    fig = plt.figure(figsize=(16, 20))
+    gs = gridspec.GridSpec(5, 4, height_ratios=[1, 1, 1, 1, 0.1], hspace=1.5, wspace=0.5)
+
+    # Create axes for boxplot/kde plots
+    boxplot_axes = []
+    for i in range(3):
+        boxplot_axes.append((
+            plt.subplot(gs[i, 0]),  # Boxplot
+            plt.subplot(gs[i, 1])  # KDE
+        ))
+
+    # Create axes for heatmaps
+    heatmap_axes = [plt.subplot(gs[3, j]) for j in range(4)]
+    cbar_ax = plt.subplot(gs[4, :])  # Shared colorbar axis
+
+    # Plot boxplot/kde pairs
+    for (ax_box, ax_kde), config in zip(boxplot_axes, plot_configs):
+        create_plot(
+            ax=ax_box,
+            ax_hist=ax_kde,
+            data=data,
+            y_col=config['y_col'],
+            title=config['title'],
+            ylabel=config['ylabel']
+        )
+
+    # Plot heatmaps with consistent parameters
+    vmin, vmax = -10, 10
+    for ax, (title, plate_data) in zip(heatmap_axes, heatmap_data.items()):
+        plot_plate_heatmap(
+            ax=ax,
+            plate=plate_data,
+            title=title,
+            vmin=vmin,
+            vmax=vmax,
+            cmap='RdBu',
+            ylabel_rotation=0
+        )
+
+    # Add shared colorbar for heatmaps
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    fig.colorbar(
+        mpl.cm.ScalarMappable(norm=norm, cmap='RdBu'),
+        cax=cbar_ax,
+        orientation='horizontal',
+        label='Z-Score'
+    )
+
+    # Final adjustments and save
+    save_editable_pdf(fig, output_path)
+    plt.close()
+
+
+
+
+# Usage
+plot_configs = [
+    {
+        'y_col': '485_525/415_518',
+        'title': 'Mitochondrial Function 3min exposure to FCCP',
+        'ylabel': 'Pericam Fluorescence Ratio (485_525/415_518)'
+    },
+    {
+        'y_col': '415_518/555_586',
+        'title': 'Mitochondrial Calcium 3min exposure to FCCP',
+        'ylabel': 'Pericam Fluorescence Ratio (415_518/555_586)'
+    },
+    {
+        'y_col': '485_525/555_586',
+        'title': 'Mitochondrial pH 3min exposure to FCCP',
+        'ylabel': 'Pericam Fluorescence Ratio (485_525/555_586)'
+    }
+]
+heatmap_data = {
+    'FCCP Mito Function 485_525/415_518 Z-Scores': plate_485_525_415_518,
+    'FCCP Mito Calcium 415_518/555_586 Z-Scores': plate_415_518_555_586,
+    'FCCP Mito pH 485_525/555_586 Z-Scores': plate_485_525_555_586,
+    'FCCP Mito Volume 555_586/(370_470+555_586) Z-scores': plate_555_586_370_470
+}
+output_file = r'C:\Users\Tyler\Box\ReiterLab_Members\Tyler\Figures\mitochondrial_analysis_sy5y_1uMt10_e3.svg'
+create_and_save_figure(
+    gm_clean,
+    plot_configs,
+    heatmap_data,
+    output_file
+)
+
+
+
+
+
+
+
+
+
+
+
 
 ########## Boxplot################
 import seaborn as sns
